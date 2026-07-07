@@ -15,8 +15,28 @@ export function getTelegramWebhookSecret(): string | undefined {
   return readEnv("TELEGRAM_WEBHOOK_SECRET");
 }
 
-export function getOpenAiApiKey(): string | undefined {
-  return readEnv("OPENAI_API_KEY");
+export function getOpenAiApiKey(): string {
+  const apiKey = readEnv("OPENAI_API_KEY");
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not set");
+  }
+  return apiKey;
+}
+
+export function getOpenAiBaseUrl(): string {
+  return readEnv("OPENAI_BASE_URL") ?? "https://openrouter.ai/api/v1";
+}
+
+export function getOpenAiModel(): string {
+  return readEnv("OPENAI_MODEL") ?? "openai/gpt-4o-mini";
+}
+
+export function getSearchApiKey(): string {
+  const apiKey = readEnv("SEARCH_API_KEY") ?? readEnv("TAVILY_API_KEY");
+  if (!apiKey) {
+    throw new Error("SEARCH_API_KEY is not set");
+  }
+  return apiKey;
 }
 
 export function getAppUrl(): string | undefined {

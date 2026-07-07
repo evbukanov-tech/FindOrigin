@@ -1,34 +1,14 @@
-import type { ParsedInput } from "@/lib/types";
-
 const MAX_QUERIES = 4;
 
-export function buildSearchQueries(parsed: ParsedInput): string[] {
-  const queries: string[] = [];
-  const primaryClaim = parsed.claims[0];
-  const primaryDate = parsed.dates[0];
-  const primaryName = parsed.names[0];
+export function buildSearchQueriesFromText(text: string): string[] {
+  const keywordQuery = buildKeywordQuery(text);
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 30)
+    .slice(0, 3);
 
-  if (primaryClaim && primaryDate) {
-    queries.push(`${primaryClaim} ${primaryDate}`);
-  }
-
-  if (primaryClaim && primaryName) {
-    queries.push(`${primaryClaim} ${primaryName}`);
-  }
-
-  if (primaryClaim) {
-    queries.push(primaryClaim);
-  }
-
-  if (parsed.names.length > 0 && parsed.dates.length > 0) {
-    queries.push(`${parsed.names.slice(0, 2).join(" ")} ${parsed.dates[0]}`);
-  }
-
-  const keywordQuery = buildKeywordQuery(parsed.rawText);
-  if (keywordQuery) {
-    queries.push(keywordQuery);
-  }
-
+  const queries = [...sentences, keywordQuery].filter(Boolean);
   return uniqueQueries(queries).slice(0, MAX_QUERIES);
 }
 
@@ -41,45 +21,11 @@ function buildKeywordQuery(text: string): string {
     .filter((word) => word.length > 3);
 
   const stopWords = new Set([
-    "этот",
-    "этого",
-    "этой",
-    "these",
-    "those",
-    "which",
-    "where",
-    "when",
-    "what",
-    "that",
-    "this",
-    "with",
-    "from",
-    "have",
-    "been",
-    "will",
-    "would",
-    "could",
-    "should",
-    "about",
-    "after",
-    "before",
-    "their",
-    "there",
-    "they",
-    "them",
-    "then",
-    "than",
-    "also",
-    "just",
-    "only",
-    "very",
-    "more",
-    "some",
-    "such",
-    "into",
-    "over",
-    "under",
-    "between",
+    "этот", "этого", "этой", "these", "those", "which", "where", "when", "what",
+    "that", "this", "with", "from", "have", "been", "will", "would", "could",
+    "should", "about", "after", "before", "their", "there", "they", "them",
+    "then", "than", "also", "just", "only", "very", "more", "some", "such",
+    "into", "over", "under", "between",
   ]);
 
   const keywords = [...new Set(words.filter((word) => !stopWords.has(word)))].slice(0, 8);

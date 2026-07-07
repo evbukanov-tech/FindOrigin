@@ -1,12 +1,3 @@
-export type ParsedInput = {
-  rawText: string;
-  claims: string[];
-  dates: string[];
-  numbers: string[];
-  names: string[];
-  links: string[];
-};
-
 export type SourceCandidate = {
   url: string;
   title: string;

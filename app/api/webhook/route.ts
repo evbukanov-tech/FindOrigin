@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { getTelegramWebhookSecret } from "@/lib/config";
-import { processUserMessage } from "@/lib/pipeline/processMessage";
+import { findOrigin } from "@/lib/pipeline/findOrigin";
 import { sendMessage } from "@/lib/telegram/client";
 import type { TelegramUpdate } from "@/lib/types/telegram";
 
@@ -39,7 +39,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   after(() => {
-    void processUserMessage(chatId, text);
+    void findOrigin(chatId, text);
   });
 
   return Response.json({ ok: true });
