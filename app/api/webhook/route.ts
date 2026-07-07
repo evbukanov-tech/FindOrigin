@@ -1,10 +1,10 @@
-import { after } from "next/server";
 import { getTelegramWebhookSecret } from "@/lib/config";
 import { findOrigin } from "@/lib/pipeline/findOrigin";
 import { sendMessage } from "@/lib/telegram/client";
 import type { TelegramUpdate } from "@/lib/types/telegram";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 function isValidSecret(request: Request): boolean {
   const expectedSecret = getTelegramWebhookSecret();
@@ -40,17 +40,13 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     await sendMessage(chatId, "Ищу источники…");
+    await findOrigin(chatId, text, { skipAck: true });
   } catch (error) {
-    console.error("Failed to acknowledge Telegram message", {
+    console.error("Webhook processing failed", {
       chatId,
       error: error instanceof Error ? error.message : String(error),
     });
-    return Response.json({ ok: true });
   }
-
-  after(() => {
-    void findOrigin(chatId, text, { skipAck: true });
-  });
 
   return Response.json({ ok: true });
 }

@@ -16,19 +16,36 @@ export async function findOrigin(
   rawText: string,
   options?: FindOriginOptions,
 ): Promise<void> {
+  const startedAt = Date.now();
   try {
     if (!options?.skipAck) {
       await sendMessage(chatId, "Ищу источники…");
     }
 
-    const text = await extractInputText(rawText);
-    const queries = await generateSearchQueries(text);
-    const candidates = await searchSources(queries);
-    const matches = await compareSources(text, candidates);
-    const response = formatSearchResponse(matches);
+    console.log("findOrigin: start", { chatId });
 
+    const text = await extractInputText(rawText);
+    console.log("findOrigin: text extracted", { chatId, length: text.length });
+
+    const queries = await generateSearchQueries(text);
+    console.log("findOrigin: queries ready", { chatId, count: queries.length });
+
+    const candidates = await searchSources(queries);
+    console.log("findOrigin: search done", { chatId, count: candidates.length });
+
+    const matches = await compareSources(text, candidates);
+    console.log("findOrigin: compare done", { chatId, count: matches.length });
+
+    const response = formatSearchResponse(matches);
     await sendMessage(chatId, response);
+
+    console.log("findOrigin: complete", { chatId, durationMs: Date.now() - startedAt });
   } catch (error) {
+    console.error("findOrigin: failed", {
+      chatId,
+      durationMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    });
     await safeSendMessage(chatId, getErrorMessage(error));
   }
 }
