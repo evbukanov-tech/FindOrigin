@@ -9,6 +9,8 @@ function readEnv(name: string): string | undefined {
     (value.startsWith("'") && value.endsWith("'"))
   ) {
     value = value.slice(1, -1).trim();
+  } else {
+    value = value.replace(/^["']+|["']+$/g, "").trim();
   }
 
   if (value.startsWith("[") && value.endsWith("]")) {
