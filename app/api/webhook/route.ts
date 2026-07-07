@@ -38,8 +38,18 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: true });
   }
 
+  try {
+    await sendMessage(chatId, "Ищу источники…");
+  } catch (error) {
+    console.error("Failed to acknowledge Telegram message", {
+      chatId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return Response.json({ ok: true });
+  }
+
   after(() => {
-    void findOrigin(chatId, text);
+    void findOrigin(chatId, text, { skipAck: true });
   });
 
   return Response.json({ ok: true });

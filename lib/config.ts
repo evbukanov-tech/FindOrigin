@@ -1,6 +1,21 @@
 function readEnv(name: string): string | undefined {
-  const value = process.env[name];
-  return value?.trim() || undefined;
+  let value = process.env[name]?.trim();
+  if (!value) {
+    return undefined;
+  }
+
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+
+  if (value.startsWith("[") && value.endsWith("]")) {
+    value = value.slice(1, -1).trim();
+  }
+
+  return value || undefined;
 }
 
 export function getTelegramBotToken(): string {
@@ -16,7 +31,7 @@ export function getTelegramWebhookSecret(): string | undefined {
 }
 
 export function getOpenAiApiKey(): string {
-  const apiKey = readEnv("OPENAI_API_KEY");
+  const apiKey = readEnv("OPENAI_API_KEY") ?? readEnv("OPENROUTER_API_KEY");
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is not set");
   }

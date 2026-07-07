@@ -7,9 +7,19 @@ import { sendMessage } from "@/lib/telegram/client";
 import { formatSearchResponse } from "@/lib/telegram/formatResponse";
 import { InputParseError } from "@/lib/types";
 
-export async function findOrigin(chatId: number, rawText: string): Promise<void> {
+type FindOriginOptions = {
+  skipAck?: boolean;
+};
+
+export async function findOrigin(
+  chatId: number,
+  rawText: string,
+  options?: FindOriginOptions,
+): Promise<void> {
   try {
-    await sendMessage(chatId, "Ищу источники…");
+    if (!options?.skipAck) {
+      await sendMessage(chatId, "Ищу источники…");
+    }
 
     const text = await extractInputText(rawText);
     const queries = await generateSearchQueries(text);
@@ -19,8 +29,18 @@ export async function findOrigin(chatId: number, rawText: string): Promise<void>
 
     await sendMessage(chatId, response);
   } catch (error) {
-    const message = getErrorMessage(error);
-    await sendMessage(chatId, message);
+    await safeSendMessage(chatId, getErrorMessage(error));
+  }
+}
+
+async function safeSendMessage(chatId: number, text: string): Promise<void> {
+  try {
+    await sendMessage(chatId, text);
+  } catch (sendError) {
+    console.error("Failed to send Telegram message", {
+      chatId,
+      error: sendError instanceof Error ? sendError.message : String(sendError),
+    });
   }
 }
 
