@@ -1,11 +1,7 @@
-import { compareSources } from "@/lib/ai/compareSources";
-import { generateSearchQueries } from "@/lib/ai/generateSearchQueries";
 import { AiClientError } from "@/lib/ai/client";
-import { extractInputText } from "@/lib/parser/input";
-import { searchSources } from "@/lib/search/searchSources";
 import { sendMessage } from "@/lib/telegram/client";
-import { formatSearchResponse } from "@/lib/telegram/formatResponse";
 import { InputParseError } from "@/lib/types";
+import { analyzeOrigin } from "@/lib/pipeline/analyzeOrigin";
 
 type FindOriginOptions = {
   skipAck?: boolean;
@@ -24,20 +20,14 @@ export async function findOrigin(
 
     console.log("findOrigin: start", { chatId });
 
-    const text = await extractInputText(rawText);
-    console.log("findOrigin: text extracted", { chatId, length: text.length });
+    const result = await analyzeOrigin(rawText);
+    console.log("findOrigin: analyze done", {
+      chatId,
+      inputLength: result.inputText.length,
+      matches: result.matches.length,
+    });
 
-    const queries = await generateSearchQueries(text);
-    console.log("findOrigin: queries ready", { chatId, count: queries.length });
-
-    const candidates = await searchSources(queries);
-    console.log("findOrigin: search done", { chatId, count: candidates.length });
-
-    const matches = await compareSources(text, candidates);
-    console.log("findOrigin: compare done", { chatId, count: matches.length });
-
-    const response = formatSearchResponse(matches);
-    await sendMessage(chatId, response);
+    await sendMessage(chatId, result.html);
 
     console.log("findOrigin: complete", { chatId, durationMs: Date.now() - startedAt });
   } catch (error) {

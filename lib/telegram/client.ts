@@ -6,17 +6,30 @@ const TELEGRAM_API = "https://api.telegram.org";
 export async function sendMessage(
   chatId: number,
   text: string,
-  parseMode: "HTML" | "Markdown" = "HTML",
+  options?: {
+    parseMode?: "HTML" | "Markdown";
+    replyMarkup?: unknown;
+  },
 ): Promise<SendMessageResult> {
   const token = getTelegramBotToken();
+  const parseMode = options?.parseMode ?? "HTML";
+
+  const replyMarkup = options?.replyMarkup;
+
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: parseMode,
+  };
+
+  if (replyMarkup) {
+    body.reply_markup = replyMarkup;
+  }
+
   const response = await fetch(`${TELEGRAM_API}/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: parseMode,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = (await response.json()) as SendMessageResult & {

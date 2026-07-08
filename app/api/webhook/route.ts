@@ -1,4 +1,4 @@
-import { getTelegramWebhookSecret } from "@/lib/config";
+import { getAppUrl, getTelegramWebhookSecret } from "@/lib/config";
 import { findOrigin } from "@/lib/pipeline/findOrigin";
 import { sendMessage } from "@/lib/telegram/client";
 import type { TelegramUpdate } from "@/lib/types/telegram";
@@ -30,16 +30,39 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: true });
   }
 
+  const appUrl = getAppUrl() ?? "http://localhost:3000";
+  const webAppUrl = `${appUrl}/tma`;
+  const replyMarkup = {
+    inline_keyboard: [
+      [
+        {
+          text: "Открыть Mini App",
+          web_app: { url: webAppUrl },
+        },
+      ],
+    ],
+  };
+
+  if (text === "/start" || text === "/tma" || text === "/webapp") {
+    await sendMessage(
+      chatId,
+      "Привет! Можешь искать источники прямо в Telegram Mini App.",
+      { replyMarkup },
+    );
+    return Response.json({ ok: true });
+  }
+
   if (!text) {
     await sendMessage(
       chatId,
       "Пришлите текст или ссылку на Telegram-пост, и я попробую найти источник.",
+      { replyMarkup },
     );
     return Response.json({ ok: true });
   }
 
   try {
-    await sendMessage(chatId, "Ищу источники…");
+    await sendMessage(chatId, "Ищу источники…", { replyMarkup });
     await findOrigin(chatId, text, { skipAck: true });
   } catch (error) {
     console.error("Webhook processing failed", {
