@@ -8,8 +8,11 @@ declare global {
     Telegram?: {
       WebApp?: {
         initData?: string;
+        initDataUnsafe?: { start_param?: string };
         ready?: () => void;
         expand?: () => void;
+        themeParams?: Record<string, string>;
+        colorScheme?: "light" | "dark";
       };
     };
   }
@@ -26,27 +29,47 @@ export default function TmaPage() {
   const [matches, setMatches] = useState<SourceMatch[]>([]);
   const [fallbackHtml, setFallbackHtml] = useState<string | null>(null);
   const [initData, setInitData] = useState<string | undefined>(undefined);
+  const [inTelegram, setInTelegram] = useState(false);
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    if (tg?.ready) tg.ready();
-    if (tg?.expand) tg.expand();
-    setInitData(tg?.initData);
+    function initTelegram() {
+      const tg = window.Telegram?.WebApp;
+      if (!tg) {
+        return;
+      }
 
-    // Optional: allow prefill from URL (?q=...).
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get("q");
-      if (q && !text) setText(q);
-    } catch {
-      // ignore
+      setInTelegram(true);
+      tg.ready?.();
+      tg.expand?.();
+      setInitData(tg.initData || undefined);
+
+      const startParam = tg.initDataUnsafe?.start_param;
+      if (startParam) {
+        try {
+          setText(decodeURIComponent(startParam));
+        } catch {
+          setText(startParam);
+        }
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    initTelegram();
+
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("q");
+    if (q) {
+      setText((current) => current || q);
+    }
+
+    window.addEventListener("load", initTelegram);
+    return () => window.removeEventListener("load", initTelegram);
   }, []);
 
   async function onSubmit() {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -79,43 +102,63 @@ export default function TmaPage() {
     <main
       style={{
         padding: 16,
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
         maxWidth: 720,
         margin: "0 auto",
+        boxSizing: "border-box",
       }}
     >
-      <h1 style={{ margin: "8px 0 16px", fontSize: 20 }}>FindOrigin</h1>
+      <h1 style={{ margin: "8px 0 4px", fontSize: 22, lineHeight: 1.2 }}>FindOrigin</h1>
+      <p style={{ margin: "0 0 16px", fontSize: 14, opacity: 0.75, lineHeight: 1.4 }}>
+        {inTelegram
+          ? "Вставьте текст или ссылку на Telegram-пост."
+          : "Откройте эту страницу из бота Telegram для полной интеграции."}
+      </p>
 
-      <div style={{ display: "grid", gap: 8 }}>
-        <label style={{ fontSize: 13, opacity: 0.8 }}>
-          Введите текст или ссылку на Telegram-пост
+      <div style={{ display: "grid", gap: 10 }}>
+        <label
+          htmlFor="findorigin-input"
+          style={{ display: "block", fontSize: 13, opacity: 0.85, lineHeight: 1.4 }}
+        >
+          Текст или ссылка
         </label>
         <textarea
+          id="findorigin-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={6}
-          placeholder="Например: «5 июля 2026 президент подписал…» или ссылку вида https://t.me/…/…"
+          placeholder="Например: «5 июля 2026 президент подписал…» или https://t.me/channel/123"
           style={{
             width: "100%",
+            boxSizing: "border-box",
             padding: 12,
-            borderRadius: 10,
-            border: "1px solid rgba(0,0,0,0.15)",
-            fontSize: 14,
+            borderRadius: 12,
+            border: "1px solid var(--tg-theme-hint-color, rgba(0,0,0,0.2))",
+            background: "var(--tg-theme-secondary-bg-color, #f7f7f7)",
+            color: "var(--tg-theme-text-color, #111)",
+            fontSize: 16,
+            lineHeight: 1.4,
             resize: "vertical",
+            minHeight: 120,
           }}
         />
 
         <button
+          type="button"
           onClick={onSubmit}
           disabled={loading || text.trim().length === 0}
           style={{
-            padding: "12px 14px",
-            borderRadius: 10,
+            padding: "14px 16px",
+            borderRadius: 12,
             border: "none",
-            background: loading || text.trim().length === 0 ? "#bdbdbd" : "#2ea44f",
-            color: "white",
+            background:
+              loading || text.trim().length === 0
+                ? "var(--tg-theme-hint-color, #bdbdbd)"
+                : "var(--tg-theme-button-color, #2ea44f)",
+            color: "var(--tg-theme-button-text-color, #ffffff)",
             cursor: loading || text.trim().length === 0 ? "not-allowed" : "pointer",
             fontWeight: 600,
+            fontSize: 16,
           }}
         >
           {loading ? "Ищу источники…" : "Найти источники"}
@@ -123,17 +166,28 @@ export default function TmaPage() {
       </div>
 
       {error ? (
-        <div style={{ marginTop: 16, color: "#b00020", whiteSpace: "pre-wrap" }}>
+        <div
+          role="alert"
+          style={{
+            marginTop: 16,
+            padding: 12,
+            borderRadius: 10,
+            background: "rgba(176, 0, 32, 0.08)",
+            color: "#b00020",
+            whiteSpace: "pre-wrap",
+            lineHeight: 1.4,
+          }}
+        >
           {error}
         </div>
       ) : null}
 
       {matches.length > 0 ? (
-        <section style={{ marginTop: 18 }}>
-          <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>Найденные источники</h2>
-          <ol style={{ paddingLeft: 18, margin: 0, display: "grid", gap: 12 }}>
+        <section style={{ marginTop: 20 }}>
+          <h2 style={{ fontSize: 17, margin: "0 0 12px" }}>Найденные источники</h2>
+          <ol style={{ paddingLeft: 20, margin: 0, display: "grid", gap: 14 }}>
             {matches.map((m, i) => (
-              <li key={m.url + i} style={{ lineHeight: 1.35 }}>
+              <li key={m.url + i} style={{ lineHeight: 1.45 }}>
                 <div style={{ fontWeight: 700 }}>
                   <a href={m.url} target="_blank" rel="noreferrer">
                     {m.title || m.url}
@@ -146,16 +200,14 @@ export default function TmaPage() {
           </ol>
         </section>
       ) : fallbackHtml ? (
-        <section style={{ marginTop: 18 }}>
-          <h2 style={{ fontSize: 16, margin: "0 0 10px" }}>Результат</h2>
+        <section style={{ marginTop: 20 }}>
+          <h2 style={{ fontSize: 17, margin: "0 0 12px" }}>Результат</h2>
           <div
-            // formatSearchResponse уже экранирует HTML (только <b> и <a>)
             dangerouslySetInnerHTML={{ __html: fallbackHtml }}
-            style={{ opacity: 0.95 }}
+            style={{ opacity: 0.95, lineHeight: 1.45 }}
           />
         </section>
       ) : null}
     </main>
   );
 }
-

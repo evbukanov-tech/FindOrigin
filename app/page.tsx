@@ -6,6 +6,10 @@ export default function HomePage() {
       <p>
         Webhook endpoint: <code>/api/webhook</code>
       </p>
+      <p>
+        Telegram Mini App:{" "}
+        <a href="/tma">/tma</a>
+      </p>
     </main>
   );
 }

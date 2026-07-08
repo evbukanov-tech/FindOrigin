@@ -29,7 +29,7 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    if (body.initData) {
+    if (body.initData?.trim()) {
       verifyTelegramWebAppInitData(body.initData, getTelegramBotToken());
     }
 
@@ -61,10 +61,29 @@ function verifyTelegramWebAppInitData(initData: string, botToken: string): void 
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
 
-  const secretKey = crypto.createHash("sha256").update(botToken).digest();
-  const checkHmac = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+  // Правильная схема для Telegram Web Apps:
+  // secretKey = HMAC_SHA256(botToken, "WebAppData")
+  // hash = HMAC_SHA256(secretKey, dataCheckString)
+  const secretKey = crypto
+    .createHmac("sha256", botToken)
+    .update("WebAppData")
+    .digest();
+  const checkHmac = crypto
+    .createHmac("sha256", secretKey)
+    .update(dataCheckString)
+    .digest("hex");
 
   if (checkHmac.toLowerCase() !== receivedHash.toLowerCase()) {
+    throw new Error("Unauthorized");
+  }
+
+  const authDate = Number(params.get("auth_date"));
+  if (!Number.isFinite(authDate)) {
+    throw new Error("Unauthorized");
+  }
+
+  const maxAgeSeconds = 60 * 60 * 24;
+  if (Math.floor(Date.now() / 1000) - authDate > maxAgeSeconds) {
     throw new Error("Unauthorized");
   }
 }
@@ -80,7 +99,7 @@ function getErrorMessage(error: unknown): string {
 
   if (error instanceof Error) {
     if (error.message === "Unauthorized") {
-      return "Unauthorized";
+      return "Не удалось подтвердить сессию Telegram. Откройте Mini App из бота.";
     }
 
     if (error.message.includes("SEARCH_API_KEY")) {

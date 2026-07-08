@@ -1,6 +1,7 @@
-import { getAppUrl, getTelegramWebhookSecret } from "@/lib/config";
+import { getTelegramWebhookSecret } from "@/lib/config";
 import { findOrigin } from "@/lib/pipeline/findOrigin";
 import { sendMessage } from "@/lib/telegram/client";
+import { getWebAppUrl } from "@/lib/telegram/webAppUrl";
 import type { TelegramUpdate } from "@/lib/types/telegram";
 
 export const runtime = "nodejs";
@@ -30,8 +31,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: true });
   }
 
-  const appUrl = getAppUrl() ?? "http://localhost:3000";
-  const webAppUrl = `${appUrl}/tma`;
+  const webAppUrl = getWebAppUrl(request);
   const replyMarkup = {
     inline_keyboard: [
       [
