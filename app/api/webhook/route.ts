@@ -44,6 +44,7 @@ export async function POST(request: Request): Promise<Response> {
   };
 
   if (text === "/start" || text === "/tma" || text === "/webapp") {
+    console.log("webhook: /start webAppUrl", { chatId, webAppUrl });
     await sendMessage(
       chatId,
       "Привет! Можешь искать источники прямо в Telegram Mini App.",

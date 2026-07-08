@@ -1,6 +1,7 @@
 import { chatCompletion } from "@/lib/ai/client";
-import { getSearchApiKey } from "@/lib/config";
+import { getAppUrl, getSearchApiKey } from "@/lib/config";
 import { searchSources } from "@/lib/search/searchSources";
+import { getWebAppUrl } from "@/lib/telegram/webAppUrl";
 
 export const runtime = "nodejs";
 
@@ -28,7 +29,12 @@ export async function GET(): Promise<Response> {
 
   const ok = Object.values(checks).every((check) => check.ok);
 
-  return Response.json({ ok, checks });
+  return Response.json({
+    ok,
+    checks,
+    webAppUrl: getWebAppUrl(),
+    appUrl: getAppUrl() ?? null,
+  });
 }
 
 async function runCheck(fn: () => Promise<string>): Promise<CheckResult> {
