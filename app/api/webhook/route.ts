@@ -31,7 +31,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: true });
   }
 
-  const webAppUrl = getWebAppUrl(request);
+  const webAppUrl = getWebAppUrl();
   const replyMarkup = {
     inline_keyboard: [
       [

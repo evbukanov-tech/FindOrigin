@@ -56,8 +56,32 @@ export function getSearchApiKey(): string {
   return apiKey;
 }
 
+function normalizeBaseUrl(url: string): string {
+  const trimmed = url.trim().replace(/\/$/, "");
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
 export function getAppUrl(): string | undefined {
-  return readEnv("VERCEL_URL")
-    ? `https://${readEnv("VERCEL_URL")}`
-    : readEnv("APP_URL");
+  const explicit = readEnv("APP_URL");
+  if (explicit) {
+    return normalizeBaseUrl(explicit);
+  }
+
+  // Стабильный production-домен (не preview URL вида *-projects.vercel.app).
+  const productionUrl = readEnv("VERCEL_PROJECT_PRODUCTION_URL");
+  if (productionUrl) {
+    return normalizeBaseUrl(productionUrl);
+  }
+
+  // VERCEL_URL — URL конкретного деплоя; для бота используем только на production.
+  const vercelEnv = readEnv("VERCEL_ENV");
+  const vercelUrl = readEnv("VERCEL_URL");
+  if (vercelEnv === "production" && vercelUrl && !vercelUrl.includes("-projects.vercel.app")) {
+    return normalizeBaseUrl(vercelUrl);
+  }
+
+  return undefined;
 }

@@ -1,9 +1,12 @@
-import crypto from "crypto";
 import { AiClientError } from "@/lib/ai/client";
 import { analyzeOrigin } from "@/lib/pipeline/analyzeOrigin";
 import { getTelegramBotToken } from "@/lib/config";
 import type { SourceMatch } from "@/lib/types";
 import { InputParseError } from "@/lib/types";
+import {
+  TelegramAuthError,
+  verifyTelegramWebAppInitData,
+} from "@/lib/telegram/verifyInitData";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -37,54 +40,11 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: true, matches, html } satisfies AnalyzeTmaResponse);
   } catch (error) {
     const message = getErrorMessage(error);
-    const status = message === "Unauthorized" ? 401 : 500;
+    const status = error instanceof TelegramAuthError ? 401 : 500;
     return Response.json(
       { ok: false, error: message } satisfies AnalyzeTmaResponse,
       { status },
     );
-  }
-}
-
-function verifyTelegramWebAppInitData(initData: string, botToken: string): void {
-  // Format: query string-like data. Example:
-  // query_id=...&user=...&auth_date=...&hash=...
-  const params = new URLSearchParams(initData);
-  const receivedHash = params.get("hash");
-  if (!receivedHash) {
-    throw new Error("Unauthorized");
-  }
-
-  params.delete("hash");
-
-  const dataCheckString = Array.from(params.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("\n");
-
-  // Правильная схема для Telegram Web Apps:
-  // secretKey = HMAC_SHA256(botToken, "WebAppData")
-  // hash = HMAC_SHA256(secretKey, dataCheckString)
-  const secretKey = crypto
-    .createHmac("sha256", botToken)
-    .update("WebAppData")
-    .digest();
-  const checkHmac = crypto
-    .createHmac("sha256", secretKey)
-    .update(dataCheckString)
-    .digest("hex");
-
-  if (checkHmac.toLowerCase() !== receivedHash.toLowerCase()) {
-    throw new Error("Unauthorized");
-  }
-
-  const authDate = Number(params.get("auth_date"));
-  if (!Number.isFinite(authDate)) {
-    throw new Error("Unauthorized");
-  }
-
-  const maxAgeSeconds = 60 * 60 * 24;
-  if (Math.floor(Date.now() / 1000) - authDate > maxAgeSeconds) {
-    throw new Error("Unauthorized");
   }
 }
 
@@ -98,7 +58,7 @@ function getErrorMessage(error: unknown): string {
   }
 
   if (error instanceof Error) {
-    if (error.message === "Unauthorized") {
+    if (error instanceof TelegramAuthError) {
       return "Не удалось подтвердить сессию Telegram. Откройте Mini App из бота.";
     }
 
